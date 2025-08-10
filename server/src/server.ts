@@ -1,5 +1,5 @@
 // server/src/server.ts - Fix server startup and error handling
-import app from './app';
+import { httpServer } from './app';
 import { testDatabaseConnection } from './db';
 
 const PORT = process.env.PORT || 5050;
@@ -15,7 +15,7 @@ const startServer = async () => {
       process.exit(1);
     }
 
-    const server = app.listen(PORT, () => {
+    const server = httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
       console.log('✅ Server is ready to accept connections');
     });
