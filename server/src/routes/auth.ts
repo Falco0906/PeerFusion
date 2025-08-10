@@ -1,3 +1,4 @@
+// server/src/routes/auth.ts - Fix login endpoint
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -8,22 +9,23 @@ const router = Router();
 
 // Helper to create JWT
 function createToken(userId: number) {
-  if (!process.env.JWT_SECRET) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
     throw new Error('JWT_SECRET is not defined');
   }
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ id: userId }, secret, { expiresIn: '7d' });
 }
 
-// Register user
+// Register endpoint
 router.post('/register', async (req: Request, res: Response) => {
-  const { email, password, first_name, last_name } = req.body;
-  
-  console.log('📝 Registration attempt for:', email);
-
   try {
+    const { first_name, last_name, email, password } = req.body;
+
     // Validate input
-    if (!email || !password || !first_name || !last_name) {
-      return res.status(400).json({ error: 'All fields are required' });
+    if (!first_name || !last_name || !email || !password) {
+      return res.status(400).json({ 
+        error: 'All fields are required' 
+      });
     }
 
     // Check if user already exists
@@ -33,87 +35,107 @@ router.post('/register', async (req: Request, res: Response) => {
     );
 
     if (existingUser.rows.length > 0) {
-      console.log('❌ User already exists:', email);
-      return res.status(400).json({ error: 'User already exists with this email' });
+      return res.status(409).json({ 
+        error: 'User already exists with this email' 
+      });
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Insert user into database
+    // Insert new user
     const result = await pool.query(
-      `INSERT INTO users (email, password, first_name, last_name, created_at) 
+      `INSERT INTO users (first_name, last_name, email, password, created_at) 
        VALUES ($1, $2, $3, $4, NOW()) 
        RETURNING id, email, first_name, last_name, created_at`,
-      [email, hashedPassword, first_name, last_name]
+      [first_name, last_name, email, hashedPassword]
     );
 
-    const newUser = result.rows[0];
-    console.log('✅ User registered successfully:', email);
+    const user = result.rows[0];
+    const token = createToken(user.id);
 
-    // Generate token
-    const token = createToken(newUser.id);
-
+    console.log(`✅ User registered successfully: ${email}`);
+    
     res.status(201).json({
       message: 'User registered successfully',
       token,
-      user: newUser
+      user: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name
+      }
     });
+
   } catch (error) {
     console.error('❌ Registration error:', error);
-    res.status(500).json({ error: 'Failed to register user' });
+    res.status(500).json({ 
+      error: 'Internal server error during registration' 
+    });
   }
 });
 
-// Login user
+// Login endpoint
 router.post('/login', async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-  
-  console.log('🔐 Login attempt for:', email);
-
   try {
+    const { email, password } = req.body;
+
+    console.log(`🔄 Login attempt for email: ${email}`);
+
     // Validate input
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+      return res.status(400).json({ 
+        error: 'Email and password are required' 
+      });
     }
 
-    // Find user
+    // Find user by email
     const result = await pool.query(
-      'SELECT id, email, password, first_name, last_name, bio, institution, field_of_study, created_at FROM users WHERE email = $1',
+      'SELECT id, email, first_name, last_name, password FROM users WHERE email = $1',
       [email]
     );
 
     if (result.rows.length === 0) {
-      console.log('❌ User not found:', email);
-      return res.status(401).json({ error: 'Invalid email or password' });
+      console.log(`❌ User not found: ${email}`);
+      return res.status(401).json({ 
+        error: 'Invalid email or password' 
+      });
     }
 
     const user = result.rows[0];
 
-    // Check password
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    // Compare password
+    const isMatch = await bcrypt.compare(password, user.password);
 
-    if (!isValidPassword) {
-      console.log('❌ Invalid password for:', email);
-      return res.status(401).json({ error: 'Invalid email or password' });
+    if (!isMatch) {
+      console.log(`❌ Invalid password for user: ${email}`);
+      return res.status(401).json({ 
+        error: 'Invalid email or password' 
+      });
     }
 
-    console.log('✅ Login successful for:', email);
-
-    // Generate token
+    // Create token
     const token = createToken(user.id);
 
-    // Remove password from response
-    delete user.password;
+    console.log(`✅ User logged in successfully: ${email}`);
 
     res.json({
       message: 'Login successful',
       token,
-      user
+      user: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name
+      }
     });
+
   } catch (error) {
     console.error('❌ Login error:', error);
-    res.status(500).json({ error: 'Failed to login' });
+    res.status(500).json({ 
+      error: 'Internal server error during login' 
+    });
   }
 });
 
@@ -121,8 +143,7 @@ router.post('/login', async (req: Request, res: Response) => {
 router.get('/me', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
-    console.log('👤 Fetching user profile for ID:', userId);
-
+    
     const result = await pool.query(
       `SELECT id, email, first_name, last_name, bio, institution, field_of_study, created_at 
        FROM users WHERE id = $1`,
@@ -130,11 +151,9 @@ router.get('/me', authenticateToken, async (req: Request, res: Response) => {
     );
 
     if (result.rows.length === 0) {
-      console.log('❌ User not found for ID:', userId);
       return res.status(404).json({ error: 'User not found' });
     }
 
-    console.log('✅ User profile fetched successfully');
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Error fetching user profile:', error);

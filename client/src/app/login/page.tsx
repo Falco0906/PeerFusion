@@ -1,3 +1,4 @@
+// src/app/login/page.tsx - Fix client-side login with better error handling
 "use client";
 
 import { useState } from "react";
@@ -19,50 +20,56 @@ export default function LoginPage() {
     setError("");
 
     try {
-      console.log("Attempting login for:", email);
+      console.log("🔄 Attempting login for:", email);
       
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050'}/api/auth/login`, {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050'}/api/auth/login`;
+      console.log("📡 API URL:", apiUrl);
+
+      const res = await fetch(apiUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
         body: JSON.stringify({ email, password }),
       });
 
-      console.log("Login response status:", res.status);
+      console.log("📊 Response status:", res.status);
       
+      // Read response text first
+      const responseText = await res.text();
+      console.log("📄 Response text:", responseText);
+
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+        let errorMessage = `HTTP ${res.status}: ${res.statusText}`;
+        
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // If response isn't JSON, use the text as error
+          errorMessage = responseText || errorMessage;
+        }
+        
+        throw new Error(errorMessage);
       }
 
-      const data = await res.json();
-      console.log("Login response data:", data);
+      // Parse successful response
+      const data = JSON.parse(responseText);
+      console.log("✅ Login successful:", data);
       
-      if (data.token) {
-        console.log("Token received, fetching user data...");
-        
-        // Fetch user data to get complete user information
-        const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050'}/api/auth/me`, {
-          headers: { Authorization: `Bearer ${data.token}` },
-        });
-        
-        console.log("User data response status:", userRes.status);
-        
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          console.log("User data received:", userData);
-          login(data.token, userData);
-          router.push("/dashboard");
-        } else {
-          const userErrorData = await userRes.json();
-          throw new Error(`Failed to fetch user data: ${userErrorData.error || userRes.statusText}`);
-        }
+      if (data.token && data.user) {
+        login(data.token, data.user);
+        console.log("🔄 Redirecting to dashboard...");
+        router.push("/dashboard");
       } else {
-        throw new Error(data.error || "No token received from login");
+        throw new Error("Invalid response format: missing token or user data");
       }
+
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An error occurred during login. Please try again.";
+      console.error("❌ Login error:", err);
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred during login";
       setError(errorMessage);
-      console.error("Login error:", err);
     } finally {
       setLoading(false);
     }
@@ -92,7 +99,7 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-6">
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-                {error}
+                <strong>Login Failed:</strong> {error}
               </div>
             )}
             
@@ -111,6 +118,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Enter your email"
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -130,6 +138,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Enter your password"
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -141,13 +150,25 @@ export default function LoginPage() {
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Signing in...
+                  </div>
                 ) : (
                   'Sign in'
                 )}
               </button>
             </div>
           </form>
+
+          <div className="mt-6">
+            <div className="text-center text-sm text-gray-600">
+              Don't have an account?{' '}
+              <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
+                Sign up here
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
