@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authenticateToken } from '../middleware/authMiddleware'; // Use centralized middleware
 
 const router = Router();
 
@@ -13,91 +13,104 @@ function createToken(userId: number) {
 
 // Register
 router.post('/register', async (req: Request, res: Response) => {
-  const { email, password, first_name, last_name } = req.body;
-
-  if (!email || !password || !first_name || !last_name) {
-    return res.status(400).json({ error: 'All fields required' });
+  const { first_name, last_name, email, password } = req.body;
+  
+  if (!first_name || !last_name || !email || !password) {
+    return res.status(400).json({ error: 'All fields are required' });
   }
 
   try {
-    const hashed = await bcrypt.hash(password, 10);
+    // Check if user exists
+    const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, first_name, last_name)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, email, first_name, last_name`,
-      [email, hashed, first_name, last_name]
+      'INSERT INTO users (first_name, last_name, email, password) VALUES ($1, $2, $3, $4) RETURNING id, email, first_name, last_name, created_at',
+      [first_name, last_name, email, hashedPassword]
     );
 
     const user = result.rows[0];
     const token = createToken(user.id);
 
-    res.status(201).json({ token, ...user });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Registration failed' });
+    res.status(201).json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name
+      }
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // Login
 router.post('/login', async (req: Request, res: Response) => {
   const { email, password } = req.body;
-  
-  console.log('Login attempt for email:', email);
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
 
   try {
-    const result = await pool.query(`SELECT * FROM users WHERE email=$1`, [email]);
-    if (result.rows.length === 0) {
-      console.log('User not found for email:', email);
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
+    // Find user
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
-    console.log('User found, ID:', user.id);
-    
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
-      console.log('Invalid password for user:', email);
+
+    if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    console.log('Password valid, generating token for user:', user.id);
+    // Check password
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
     const token = createToken(user.id);
-    res.json({ token });
-  } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ error: 'Login failed' });
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Get current user
+// Get current user - FIXED TO USE CENTRALIZED MIDDLEWARE
 router.get('/me', authenticateToken, async (req: Request, res: Response) => {
   try {
-    console.log('Fetching user data for ID:', (req as any).user.id);
-    
+    const userId = (req as any).user.id; // Use req.user.id from centralized middleware
     const result = await pool.query(
-      `SELECT id, email, first_name, last_name, bio, institution, field_of_study, created_at FROM users WHERE id = $1`,
-      [(req as any).user.id]
+      'SELECT id, email, first_name, last_name, bio, institution, field_of_study, created_at FROM users WHERE id = $1',
+      [userId]
     );
 
     if (result.rows.length === 0) {
-      console.log('User not found for ID:', (req as any).user.id);
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const userData = result.rows[0];
-    console.log('User data fetched successfully:', { id: userData.id, email: userData.email });
-    
-    // Convert timestamp to ISO string for JSON serialization
-    if (userData.created_at) {
-      userData.created_at = userData.created_at.toISOString();
-    }
-    
-    res.json(userData);
-  } catch (err) {
-    console.error('Error in /me endpoint:', err);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to fetch user' });
   }
 });
 
 export default router;
-

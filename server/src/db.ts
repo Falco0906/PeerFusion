@@ -13,11 +13,23 @@ export const pool = new Pool({
 
 // Test the connection
 pool.on('connect', () => {
-  console.log('Connected to PostgreSQL database');
+  console.log('✅ Connected to PostgreSQL database');
 });
 
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  // Don't exit the process, just log the error
-  // process.exit(-1);
+  console.error('❌ Database connection error:', err);
+  // DON'T exit the process - just log the error
 });
+
+// Test connection on startup
+pool.connect()
+  .then(() => {
+    console.log('✅ Database connection test successful');
+    return pool.query('SELECT NOW()');
+  })
+  .then(result => {
+    console.log('✅ Database query test successful:', result.rows[0].now);
+  })
+  .catch(err => {
+    console.error('❌ Database connection test failed:', err.message);
+  });
