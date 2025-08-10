@@ -46,7 +46,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // Insert new user
     const result = await pool.query(
-      `INSERT INTO users (first_name, last_name, email, password, created_at) 
+      `INSERT INTO users (first_name, last_name, email, password_hash, created_at) 
        VALUES ($1, $2, $3, $4, NOW()) 
        RETURNING id, email, first_name, last_name, created_at`,
       [first_name, last_name, email, hashedPassword]
@@ -92,7 +92,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     // Find user by email
     const result = await pool.query(
-      'SELECT id, email, first_name, last_name, password FROM users WHERE email = $1',
+      'SELECT id, email, first_name, last_name, password_hash FROM users WHERE email = $1',
       [email]
     );
 
@@ -106,7 +106,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const user = result.rows[0];
 
     // Compare password
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
       console.log(`❌ Invalid password for user: ${email}`);
