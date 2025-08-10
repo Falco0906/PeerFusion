@@ -31,44 +31,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    console.log("AuthContext useEffect triggered");
-    const token = localStorage.getItem("token");
-    console.log("Token found:", !!token);
-    
-    if (token) {
-      // Fetch user data if token exists
-      console.log("Fetching user data from /api/auth/me");
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050'}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(async (res) => {
-          console.log("Auth response status:", res.status);
-          if (!res.ok) throw new Error("Unauthorized");
-          const data = await res.json();
-          console.log("User data received:", data);
-          setUser(data);
-        })
-        .catch((error) => {
-          console.error("Auth error:", error);
-          localStorage.removeItem("token");
-          setUser(null);
-        })
-        .finally(() => {
-          console.log("Setting loading to false");
-          setLoading(false);
-        });
-    } else {
-      console.log("No token found, setting loading to false");
-      setLoading(false);
-    }
+    const initAuth = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        console.log("🔐 Checking for existing token:", !!token);
+        
+        if (token) {
+          console.log("📡 Fetching user data...");
+          const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050'}/api/auth/me`;
+          
+          const response = await fetch(apiUrl, {
+            headers: { 
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+          });
+          
+          console.log("🌐 Auth response status:", response.status);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const userData = await response.json();
+          console.log("✅ User data received:", userData);
+          setUser(userData);
+        } else {
+          console.log("❌ No token found");
+        }
+      } catch (error) {
+        console.error("❌ Auth initialization error:", error);
+        localStorage.removeItem("token");
+        setUser(null);
+      } finally {
+        setLoading(false);
+        console.log("🏁 Auth initialization complete");
+      }
+    };
+
+    initAuth();
   }, []);
 
-  const login = (token: string, userData: User) => {
-    localStorage.setItem("token", token);
-    setUser(userData);
+  const login = async (token: string, userData: User) => {
+    try {
+      console.log("🔑 Logging in user:", userData.email);
+      localStorage.setItem("token", token);
+      setUser(userData);
+      console.log("✅ Login successful");
+    } catch (error) {
+      console.error("❌ Login error:", error);
+    }
   };
 
   const logout = () => {
+    console.log("🚪 Logging out user");
     localStorage.removeItem("token");
     setUser(null);
     router.push("/login");
@@ -76,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUser = (userData: Partial<User>) => {
     if (user) {
+      console.log("📝 Updating user data:", userData);
       setUser({ ...user, ...userData });
     }
   };
