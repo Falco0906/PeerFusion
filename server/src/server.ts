@@ -11,13 +11,22 @@ const startServer = async () => {
     const dbConnected = await testDatabaseConnection();
     
     if (!dbConnected) {
-      console.error('❌ Failed to connect to database. Please check your database connection.');
-      process.exit(1);
+      console.warn('⚠️  Database connection failed. Server will start without database support.');
+      console.log('💡 To enable database features, please:');
+      console.log('   1. Install PostgreSQL');
+      console.log('   2. Create a .env file with database credentials');
+      console.log('   3. Create the database and user');
+      console.log('   4. Restart the server');
+    } else {
+      console.log('✅ Database connection successful');
     }
 
     const server = httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
       console.log('✅ Server is ready to accept connections');
+      if (!dbConnected) {
+        console.log('⚠️  Running in limited mode (no database)');
+      }
     });
 
     // Handle server errors

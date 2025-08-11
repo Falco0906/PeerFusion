@@ -4,12 +4,26 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Check if required environment variables are set
+const requiredEnvVars = ['DB_USER', 'DB_HOST', 'DB_NAME', 'DB_PASSWORD', 'DB_PORT'];
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+  console.warn('⚠️  Missing database environment variables:', missingEnvVars.join(', '));
+  console.log('💡 Create a .env file with the following variables:');
+  console.log('   DB_USER=your_db_user');
+  console.log('   DB_HOST=localhost');
+  console.log('   DB_NAME=your_db_name');
+  console.log('   DB_PASSWORD=your_db_password');
+  console.log('   DB_PORT=5432');
+}
+
 export const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: Number(process.env.DB_PORT),
+  user: process.env.DB_USER || 'peerfusion_user',
+  host: process.env.DB_HOST || 'localhost',
+  database: process.env.DB_NAME || 'peerfusion_db',
+  password: process.env.DB_PASSWORD || 'peerfusion_password',
+  port: Number(process.env.DB_PORT) || 5432,
   // Add connection pool settings
   max: 20,
   idleTimeoutMillis: 30000,

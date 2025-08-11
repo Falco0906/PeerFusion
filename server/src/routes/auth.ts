@@ -16,6 +16,18 @@ function createToken(userId: number) {
   return jwt.sign({ id: userId }, secret, { expiresIn: '7d' });
 }
 
+// Database operation wrapper to handle connection errors gracefully
+async function withDatabase<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch (error: any) {
+    if (error.code === 'ECONNREFUSED' || error.code === '28P01') {
+      throw new Error('Database is not available. Please check your database connection.');
+    }
+    throw error;
+  }
+}
+
 // Register endpoint
 router.post('/register', async (req: Request, res: Response) => {
   try {
@@ -29,9 +41,8 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     // Check if user already exists
-    const existingUser = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [email]
+    const existingUser = await withDatabase(async () => 
+      pool.query('SELECT id FROM users WHERE email = $1', [email])
     );
 
     if (existingUser.rows.length > 0) {
@@ -45,11 +56,13 @@ router.post('/register', async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Insert new user
-    const result = await pool.query(
-      `INSERT INTO users (first_name, last_name, email, password_hash, created_at) 
-       VALUES ($1, $2, $3, $4, NOW()) 
-       RETURNING id, email, first_name, last_name, created_at`,
-      [first_name, last_name, email, hashedPassword]
+    const result = await withDatabase(async () =>
+      pool.query(
+        `INSERT INTO users (first_name, last_name, email, password_hash, created_at) 
+         VALUES ($1, $2, $3, $4, NOW()) 
+         RETURNING id, email, first_name, last_name, created_at`,
+        [first_name, last_name, email, hashedPassword]
+      )
     );
 
     const user = result.rows[0];
@@ -68,8 +81,15 @@ router.post('/register', async (req: Request, res: Response) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Registration error:', error);
+    
+    if (error.message.includes('Database is not available')) {
+      return res.status(503).json({ 
+        error: 'Service temporarily unavailable. Database connection failed.' 
+      });
+    }
+    
     res.status(500).json({ 
       error: 'Internal server error during registration' 
     });
@@ -91,9 +111,11 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     // Find user by email
-    const result = await pool.query(
-      'SELECT id, email, first_name, last_name, password_hash FROM users WHERE email = $1',
-      [email]
+    const result = await withDatabase(async () =>
+      pool.query(
+        'SELECT id, email, first_name, last_name, password_hash FROM users WHERE email = $1',
+        [email]
+      )
     );
 
     if (result.rows.length === 0) {
@@ -131,8 +153,15 @@ router.post('/login', async (req: Request, res: Response) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Login error:', error);
+    
+    if (error.message.includes('Database is not available')) {
+      return res.status(503).json({ 
+        error: 'Service temporarily unavailable. Database connection failed.' 
+      });
+    }
+    
     res.status(500).json({ 
       error: 'Internal server error during login' 
     });
@@ -144,10 +173,12 @@ router.get('/me', authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
     
-    const result = await pool.query(
-      `SELECT id, email, first_name, last_name, bio, institution, field_of_study, created_at 
-       FROM users WHERE id = $1`,
-      [userId]
+    const result = await withDatabase(async () =>
+      pool.query(
+        `SELECT id, email, first_name, last_name, bio, institution, field_of_study, created_at 
+         FROM users WHERE id = $1`,
+        [userId]
+      )
     );
 
     if (result.rows.length === 0) {
@@ -155,9 +186,16 @@ router.get('/me', authenticateToken, async (req: Request, res: Response) => {
     }
 
     res.json(result.rows[0]);
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error fetching user profile:', error);
-    res.status(500).json({ error: 'Failed to fetch user profile' });
+    
+    if (error.message.includes('Database is not available')) {
+      return res.status(503).json({ 
+        error: 'Service temporarily unavailable. Database connection failed.' 
+      });
+    }
+    
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
