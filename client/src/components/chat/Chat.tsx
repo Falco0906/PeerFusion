@@ -9,9 +9,10 @@ import { Send, MessageCircle, Users, ArrowLeft } from 'lucide-react';
 
 interface ChatProps {
   onClose?: () => void;
+  onUnreadCountChange?: (count: number) => void;
 }
 
-export default function Chat({ onClose }: ChatProps) {
+export default function Chat({ onClose, onUnreadCountChange }: ChatProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);

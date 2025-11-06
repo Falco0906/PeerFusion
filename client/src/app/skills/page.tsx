@@ -118,7 +118,7 @@ export default function SkillsPage() {
           </div>
           <Link
             href="/skills/share"
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg border border-green-700 hover:border-green-800"
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg border border-green-700 hover:border-green-800 hover:text-white"
           >
             Share a Skill
           </Link>
@@ -263,7 +263,7 @@ export default function SkillsPage() {
             {skills.length === 0 && (
               <Link
                 href="/skills/share"
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg border border-green-700 hover:border-green-800"
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg border border-green-700 hover:border-green-800 hover:text-white"
               >
                 Share Your First Skill
               </Link>
