@@ -59,10 +59,11 @@ export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPost, setNewPost] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showComments, setShowComments] = useState<{ [key: number]: boolean }>({});
   const [comments, setComments] = useState<{ [key: number]: Comment[] }>({});
   const [newComment, setNewComment] = useState<{ [key: number]: string }>({});
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     fetchPosts();
@@ -71,6 +72,12 @@ export default function FeedPage() {
   const fetchPosts = async () => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Authentication required");
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5051'}/api/posts`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -79,10 +86,15 @@ export default function FeedPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setPosts(data);
+        setPosts(Array.isArray(data) ? data : []);
+        setError(null);
+      } else {
+        setError("Failed to load posts");
       }
     } catch (error) {
       console.error("Error fetching posts:", error);
+      setError("Failed to load posts");
+      setPosts([]);
     } finally {
       setLoading(false);
     }
@@ -228,12 +240,40 @@ export default function FeedPage() {
     return date.toLocaleDateString();
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading feed...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-foreground mb-2">Authentication Required</h2>
+          <p className="text-muted-foreground mb-4">Please log in to view the feed.</p>
+          <Link href="/login" className="btn-primary">
+            Go to Login
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-foreground mb-2">Error Loading Feed</h2>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <button onClick={fetchPosts} className="btn-primary">
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -313,13 +353,13 @@ export default function FeedPage() {
                 <div className="flex items-start space-x-3 mb-4">
                   <Link href={`/profile/${post.user_id}`}>
                     <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center text-white font-semibold text-lg cursor-pointer hover:opacity-80 transition-opacity">
-                      {post.first_name[0]}{post.last_name[0]}
+                      {post.first_name?.[0] || 'U'}{post.last_name?.[0] || ''}
                     </div>
                   </Link>
                   <div className="flex-1">
                     <Link href={`/profile/${post.user_id}`}>
                       <h3 className="font-semibold text-foreground hover:text-primary cursor-pointer">
-                        {post.first_name} {post.last_name}
+                        {post.first_name || 'Unknown'} {post.last_name || 'User'}
                       </h3>
                     </Link>
                     {post.institution && (
@@ -415,7 +455,7 @@ export default function FeedPage() {
                       {comments[post.id]?.map((comment) => (
                         <div key={comment.id} className="flex items-start space-x-2">
                           <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                            {comment.first_name[0]}{comment.last_name[0]}
+                            {comment.first_name?.[0] || 'U'}{comment.last_name?.[0] || ''}
                           </div>
                           <div className="flex-1">
                             <div className="glass rounded-lg p-3">
