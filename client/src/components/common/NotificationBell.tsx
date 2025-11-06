@@ -172,7 +172,7 @@ export default function NotificationBell() {
       {/* Bell Icon */}
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        className="relative p-2 rounded-full hover:bg-muted transition-colors"
         aria-label="Notifications"
       >
         <svg
@@ -202,12 +202,12 @@ export default function NotificationBell() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[9996]"
             onClick={() => setShowDropdown(false)}
           />
 
           {/* Dropdown Content */}
-          <div className="absolute right-0 mt-2 w-96 glass-strong rounded-lg shadow-2xl border border-border z-50 max-h-[500px] flex flex-col overflow-hidden">
+          <div className="absolute right-0 mt-2 w-96 bg-background rounded-lg shadow-2xl border border-border z-[9997] max-h-[500px] flex flex-col overflow-hidden">
             {/* Header */}
             <div className="px-4 py-3 border-b border-border/50 flex justify-between items-center bg-card/50">
               <h3 className="text-lg font-semibold text-foreground">

@@ -147,7 +147,7 @@ export default function SearchPage() {
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-gradient-to-r from-primary to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-white font-bold text-lg">
-                      {result.first_name[0]}{result.last_name[0]}
+                      {result.first_name?.[0] || 'U'}{result.last_name?.[0] || ''}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">

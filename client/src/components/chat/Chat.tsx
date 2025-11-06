@@ -108,23 +108,40 @@ export default function Chat({ onClose }: ChatProps) {
         newMessage.trim()
       );
 
-      // Add message to local state
-      setMessages(prev => [...prev, message]);
-      
-      // Send via socket for real-time delivery
-      sendMessage(selectedConversation.other_user_id, message.content);
+      if (message) {
+        // Add message to local state
+        setMessages(prev => [...prev, message]);
+        
+        // Send via socket for real-time delivery
+        sendMessage(selectedConversation.other_user_id, message.content);
+        
+        // Update conversation list
+        updateConversationWithNewMessage(message);
+      } else {
+        // If API fails, create a local message
+        const localMessage: Message = {
+          id: Date.now(),
+          sender_id: user?.id || 0,
+          receiver_id: selectedConversation.other_user_id,
+          content: newMessage.trim(),
+          message_type: 'text',
+          is_read: false,
+          created_at: new Date().toISOString()
+        };
+        
+        setMessages(prev => [...prev, localMessage]);
+        sendMessage(selectedConversation.other_user_id, localMessage.content);
+        updateConversationWithNewMessage(localMessage);
+      }
       
       // Clear input
       setNewMessage('');
-      
-      // Update conversation list
-      updateConversationWithNewMessage(message);
       
       // Stop typing indicator
       sendTyping(selectedConversation.other_user_id, false);
       setIsTyping(false);
     } catch (error) {
-      // Silently fail - messages endpoint not yet migrated
+      console.error('Error sending message:', error);
     }
   };
 
@@ -182,7 +199,7 @@ export default function Chat({ onClose }: ChatProps) {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/search?q=${encodeURIComponent(query)}&type=users`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5051'}/api/search?q=${encodeURIComponent(query)}&type=users`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -294,12 +311,12 @@ export default function Chat({ onClose }: ChatProps) {
           
           {/* Search Results Dropdown */}
           {searchResults.length > 0 && (
-            <div className="absolute z-50 mt-1 w-72 glass-strong border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            <div className="absolute z-[100] mt-1 left-4 right-4 bg-background border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
               {searchResults.map((result) => (
                 <button
                   key={result.id}
                   onClick={() => startConversationWithUser(result)}
-                  className="w-full p-3 hover:bg-primary/10 transition-colors text-left border-b border-border/30 last:border-0"
+                  className="w-full p-3 hover:bg-muted transition-colors text-left border-b border-border/30 last:border-0"
                 >
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center text-white text-sm font-semibold">

@@ -212,7 +212,7 @@ export default function NetworkPage() {
                   <Link href={`/profile/${connection.id}`}>
                     <div className="flex flex-col items-center text-center">
                       <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3 cursor-pointer hover:opacity-80 transition-opacity">
-                        {connection.first_name[0]}{connection.last_name[0]}
+                        {connection.first_name?.[0] || 'U'}{connection.last_name?.[0] || ''}
                       </div>
                       <h3 className="font-semibold text-foreground hover:text-primary cursor-pointer mb-1">
                         {connection.first_name} {connection.last_name}
@@ -264,7 +264,7 @@ export default function NetworkPage() {
                   <div className="flex items-center gap-4">
                     <Link href={`/profile/${request.id}`}>
                       <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center text-white font-bold text-xl cursor-pointer hover:opacity-80 transition-opacity">
-                        {request.first_name[0]}{request.last_name[0]}
+                        {request.first_name?.[0] || 'U'}{request.last_name?.[0] || ''}
                       </div>
                     </Link>
                     <div>

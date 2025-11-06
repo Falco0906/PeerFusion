@@ -75,13 +75,13 @@ export default function ChatButton() {
         <>
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 z-[100] bg-black/60"
+            className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm"
             onClick={() => setIsOpen(false)}
           />
           
           {/* Side Panel */}
           <div 
-            className="fixed right-0 top-0 bottom-0 w-full sm:w-[650px] md:w-[750px] lg:w-[850px] z-[101] bg-card shadow-2xl border-l border-border flex flex-col"
+            className="fixed right-0 top-0 bottom-0 w-full sm:w-[650px] md:w-[750px] lg:w-[850px] z-[9999] bg-background shadow-2xl border-l border-border flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -96,30 +96,30 @@ export default function ChatButton() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {/* TODO: New message */}}
-                    className="p-2 hover:bg-muted rounded-lg  group"
+                    className="p-2 hover:bg-muted rounded-lg transition-colors group"
                     title="New message"
                   >
-                    <Edit className="w-5 h-5 text-muted-foreground group-hover:text-primary " />
+                    <Edit className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                   </button>
                   <button
                     onClick={() => setShowFilters(!showFilters)}
-                    className={`p-2 hover:bg-muted rounded-lg  ${showFilters ? 'bg-primary/20' : ''}`}
+                    className={`p-2 hover:bg-muted rounded-lg transition-colors ${showFilters ? 'bg-primary/20' : ''}`}
                     title="Filters"
                   >
-                    <Filter className="w-5 h-5 text-muted-foreground" />
+                    <Filter className={`w-5 h-5 transition-colors ${showFilters ? 'text-primary' : 'text-muted-foreground'}`} />
                   </button>
                   <button
                     onClick={() => {/* TODO: Settings */}}
-                    className="p-2 hover:bg-muted rounded-lg "
+                    className="p-2 hover:bg-muted rounded-lg transition-colors"
                     title="Settings"
                   >
-                    <Settings className="w-5 h-5 text-muted-foreground" />
+                    <Settings className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
                   </button>
                   <button
                     onClick={() => setIsOpen(false)}
-                    className="p-2 hover:bg-destructive/20 rounded-lg  group"
+                    className="p-2 hover:bg-destructive/20 rounded-lg transition-colors group"
                   >
-                    <X className="w-5 h-5 text-muted-foreground group-hover:text-destructive " />
+                    <X className="w-5 h-5 text-muted-foreground group-hover:text-destructive transition-colors" />
                   </button>
                 </div>
               </div>
@@ -142,10 +142,10 @@ export default function ChatButton() {
               <div className="flex items-center gap-1 px-4 pb-3">
                 <button
                   onClick={() => setActiveTab('all')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg  ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                     activeTab === 'all' 
                       ? 'bg-primary text-white' 
-                      : 'text-gray-400 hover:bg-white/5'
+                      : 'text-muted-foreground hover:bg-muted/50'
                   }`}
                 >
                   <MessageCircle className="w-4 h-4" />
@@ -153,10 +153,10 @@ export default function ChatButton() {
                 </button>
                 <button
                   onClick={() => setActiveTab('unread')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg  relative ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors relative ${
                     activeTab === 'unread' 
                       ? 'bg-primary text-white' 
-                      : 'text-gray-400 hover:bg-white/5'
+                      : 'text-muted-foreground hover:bg-muted/50'
                   }`}
                 >
                   <div className="relative">
@@ -169,10 +169,10 @@ export default function ChatButton() {
                 </button>
                 <button
                   onClick={() => setActiveTab('starred')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg  ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                     activeTab === 'starred' 
                       ? 'bg-primary text-white' 
-                      : 'text-gray-400 hover:bg-white/5'
+                      : 'text-muted-foreground hover:bg-muted/50'
                   }`}
                 >
                   <Star className="w-4 h-4" />
@@ -180,10 +180,10 @@ export default function ChatButton() {
                 </button>
                 <button
                   onClick={() => setActiveTab('archived')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg  ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                     activeTab === 'archived' 
                       ? 'bg-primary text-white' 
-                      : 'text-gray-400 hover:bg-white/5'
+                      : 'text-muted-foreground hover:bg-muted/50'
                   }`}
                 >
                   <Archive className="w-4 h-4" />
@@ -195,26 +195,26 @@ export default function ChatButton() {
               {showFilters && (
                 <div className="px-4 pb-3 border-t border-border pt-3 bg-muted">
                   <div className="flex flex-wrap gap-2">
-                    <button className="px-3 py-1.5 text-xs text-muted-foreground bg-card border border-border rounded-full hover:bg-primary hover:text-white hover:border-primary ">
+                    <button className="px-3 py-1.5 text-xs text-muted-foreground bg-card border border-border rounded-full hover:bg-primary hover:text-white hover:border-primary transition-colors">
                       <Users className="w-3 h-3 inline mr-1" />
                       Group chats
                     </button>
-                    <button className="px-3 py-1.5 text-xs text-muted-foreground bg-card border border-border rounded-full hover:bg-primary hover:text-white hover:border-primary ">
+                    <button className="px-3 py-1.5 text-xs text-muted-foreground bg-card border border-border rounded-full hover:bg-primary hover:text-white hover:border-primary transition-colors">
                       Media
                     </button>
-                    <button className="px-3 py-1.5 text-xs text-muted-foreground bg-card border border-border rounded-full hover:bg-primary hover:text-white hover:border-primary ">
+                    <button className="px-3 py-1.5 text-xs text-muted-foreground bg-card border border-border rounded-full hover:bg-primary hover:text-white hover:border-primary transition-colors">
                       Links
                     </button>
-                    <button className="px-3 py-1.5 text-xs text-muted-foreground bg-card border border-border rounded-full hover:bg-primary hover:text-white hover:border-primary ">
+                    <button className="px-3 py-1.5 text-xs text-muted-foreground bg-card border border-border rounded-full hover:bg-primary hover:text-white hover:border-primary transition-colors">
                       Files
                     </button>
-                    <button className="px-3 py-1.5 text-xs text-muted-foreground bg-card border border-border rounded-full hover:bg-primary hover:text-white hover:border-primary ">
+                    <button className="px-3 py-1.5 text-xs text-muted-foreground bg-card border border-border rounded-full hover:bg-primary hover:text-white hover:border-primary transition-colors">
                       Today
                     </button>
-                    <button className="px-3 py-1.5 text-xs text-muted-foreground bg-card border border-border rounded-full hover:bg-primary hover:text-white hover:border-primary ">
+                    <button className="px-3 py-1.5 text-xs text-muted-foreground bg-card border border-border rounded-full hover:bg-primary hover:text-white hover:border-primary transition-colors">
                       This week
                     </button>
-                    <button className="px-3 py-1.5 text-xs text-destructive border border-destructive/30 rounded-full hover:bg-destructive hover:text-white ">
+                    <button className="px-3 py-1.5 text-xs text-destructive border border-destructive/30 rounded-full hover:bg-destructive hover:text-white transition-colors">
                       Clear filters
                     </button>
                   </div>
