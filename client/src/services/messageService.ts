@@ -31,10 +31,14 @@ export const messageService = {
   // Get all conversations for the current user
   async getConversations(): Promise<Conversation[]> {
     try {
+      console.log('Calling API to get conversations');
       const response = await api.get('/api/messages/conversations');
+      console.log('Conversations API response:', response);
       return response.data;
-    } catch (error) {
-      // Return empty array if endpoint not available
+    } catch (error: any) {
+      console.error('Error getting conversations:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       return [];
     }
   },
@@ -53,14 +57,18 @@ export const messageService = {
   // Send a message
   async sendMessage(receiverId: number, content: string, messageType: string = 'text'): Promise<Message | null> {
     try {
+      console.log('Calling API to send message:', { receiverId, content, messageType });
       const response = await api.post('/api/messages/send', {
         receiverId,
         content,
         messageType
       });
+      console.log('API response:', response);
       return response.data;
-    } catch (error) {
-      // Return null if endpoint not available
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       return null;
     }
   },
