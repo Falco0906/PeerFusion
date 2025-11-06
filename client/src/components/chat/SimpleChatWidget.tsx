@@ -29,8 +29,14 @@ export default function SimpleChatWidget() {
   }, [isOpen, user]);
 
   const loadConversations = async () => {
-    const convs = await messageService.getConversations();
-    setConversations(convs);
+    try {
+      console.log('Loading conversations...');
+      const convs = await messageService.getConversations();
+      console.log('Conversations loaded:', convs);
+      setConversations(convs);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    }
   };
 
   const loadUnreadCount = async () => {
@@ -39,22 +45,40 @@ export default function SimpleChatWidget() {
   };
 
   const loadMessages = async (conv: Conversation) => {
-    setSelectedConv(conv);
-    const msgs = await messageService.getChatHistory(conv.other_user_id);
-    setMessages(msgs);
-    await messageService.markAsRead(conv.other_user_id);
-    loadUnreadCount();
+    try {
+      console.log('Loading messages for:', conv);
+      setSelectedConv(conv);
+      const msgs = await messageService.getChatHistory(conv.other_user_id);
+      console.log('Messages loaded:', msgs);
+      setMessages(msgs);
+      await messageService.markAsRead(conv.other_user_id);
+      loadUnreadCount();
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
   };
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConv) return;
     
-    const msg = await messageService.sendMessage(selectedConv.other_user_id, newMessage.trim());
-    if (msg) {
-      setMessages(prev => [...prev, msg]);
-      socketSend?.(selectedConv.other_user_id, newMessage.trim());
+    try {
+      console.log('Sending message to:', selectedConv.other_user_id, 'Content:', newMessage);
+      const msg = await messageService.sendMessage(selectedConv.other_user_id, newMessage.trim());
+      console.log('Message sent response:', msg);
+      
+      if (msg) {
+        setMessages(prev => [...prev, msg]);
+        socketSend?.(selectedConv.other_user_id, newMessage.trim());
+        
+        // Reload conversations to update the list
+        loadConversations();
+      } else {
+        console.error('Failed to send message - no response from server');
+      }
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
     }
-    setNewMessage('');
   };
 
   const handleSearch = async (query: string) => {
