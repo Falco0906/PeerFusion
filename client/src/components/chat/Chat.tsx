@@ -19,6 +19,9 @@ export default function Chat({ onClose }: ChatProps) {
   const [loading, setLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
   
   const { user } = useAuth();
   const { socket, isConnected, sendMessage, sendTyping } = useSocket();
@@ -167,6 +170,70 @@ export default function Chat({ onClose }: ChatProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleSearchUsers = async (query: string) => {
+    setSearchQuery(query);
+    
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/search?q=${encodeURIComponent(query)}&type=users`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data.users || []);
+      }
+    } catch (error) {
+      console.error('Error searching users:', error);
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const startConversationWithUser = async (selectedUser: any) => {
+    // Check if conversation already exists
+    const existingConv = conversations.find(conv => conv.other_user_id === selectedUser.id);
+    
+    if (existingConv) {
+      loadChatHistory(existingConv);
+    } else {
+      // Create a new conversation object
+      const newConv: Conversation = {
+        id: selectedUser.id,
+        other_user_id: selectedUser.id,
+        first_name: selectedUser.first_name,
+        last_name: selectedUser.last_name,
+        email: selectedUser.email,
+        avatar: selectedUser.avatar || null,
+        last_message_at: new Date().toISOString(),
+        last_message_id: null,
+        last_message_content: null,
+        last_message_sender_id: null
+      };
+      
+      setSelectedConversation(newConv);
+      setMessages([]);
+      setConversations(prev => [newConv, ...prev]);
+    }
+    
+    // Clear search
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -202,12 +269,57 @@ export default function Chat({ onClose }: ChatProps) {
       {/* Conversations Sidebar */}
       <div className="w-80 border-r border-border/50 flex flex-col bg-card/30">
         <div className="p-4 border-b border-border/50">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold text-foreground flex items-center">
               <MessageCircle className="w-5 h-5 mr-2" />
               Conversations
             </h2>
           </div>
+          
+          {/* Search Users */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => handleSearchUsers(e.target.value)}
+              className="input w-full text-sm"
+            />
+            {searching && (
+              <div className="absolute right-3 top-2.5">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              </div>
+            )}
+          </div>
+          
+          {/* Search Results Dropdown */}
+          {searchResults.length > 0 && (
+            <div className="absolute z-50 mt-1 w-72 glass-strong border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {searchResults.map((result) => (
+                <button
+                  key={result.id}
+                  onClick={() => startConversationWithUser(result)}
+                  className="w-full p-3 hover:bg-primary/10 transition-colors text-left border-b border-border/30 last:border-0"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                      {result.first_name?.[0]}{result.last_name?.[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">
+                        {result.first_name} {result.last_name}
+                      </p>
+                      {result.institution && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {result.institution}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto">

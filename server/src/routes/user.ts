@@ -97,7 +97,7 @@ router.post('/skills', authenticateToken, async (req, res) => {
         user_id: userId,
         skill_name,
         category,
-        proficiency_level: proficiency_level || 3,
+        proficiency_level: proficiency_level || 'intermediate',
         description: description || null,
         years_of_experience: years_of_experience || null,
         willing_to_mentor: willing_to_mentor || false,
