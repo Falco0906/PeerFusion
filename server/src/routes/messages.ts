@@ -161,9 +161,14 @@ router.post('/send', authenticateToken, async (req: Request, res: Response) => {
     console.log(`💬 Message sent from ${senderId} to ${receiverId}`);
     res.status(201).json(message);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error sending message:', error);
-    res.status(500).json({ error: 'Failed to send message' });
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    res.status(500).json({ 
+      error: 'Failed to send message',
+      details: error.message || 'Unknown error',
+      code: error.code
+    });
   }
 });
 
