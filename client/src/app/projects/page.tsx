@@ -169,7 +169,8 @@ export default function ProjectsPage() {
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Link
               href="/projects/new"
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg border border-green-700 hover:border-green-800 hover:text-white"
+              className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg border border-green-700 hover:border-green-800"
+              style={{ color: '#ffffff' }}
             >
               Create Project
             </Link>
@@ -340,7 +341,8 @@ export default function ProjectsPage() {
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Link
                   href="/projects/new"
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg border border-green-700 hover:border-green-800 hover:text-white"
+                  className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg border border-green-700 hover:border-green-800"
+                  style={{ color: '#ffffff' }}
                 >
                   Create Your First Project
                 </Link>
