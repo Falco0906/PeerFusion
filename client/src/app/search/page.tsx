@@ -22,6 +22,8 @@ export default function SearchPage() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchType, setSearchType] = useState<"users" | "projects">("users");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [liveResults, setLiveResults] = useState<SearchResult[]>([]);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -29,7 +31,21 @@ export default function SearchPage() {
     }
   }, [loading, isAuthenticated, router]);
 
-  const handleSearch = async () => {
+  // Live search as user types
+  useEffect(() => {
+    const delaySearch = setTimeout(() => {
+      if (searchQuery.trim().length > 1) {
+        performSearch(true);
+      } else {
+        setLiveResults([]);
+        setShowDropdown(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delaySearch);
+  }, [searchQuery, searchType]);
+
+  const performSearch = async (isLive = false) => {
     if (!searchQuery.trim()) return;
     
     setSearching(true);
@@ -50,37 +66,33 @@ export default function SearchPage() {
       }
       
       const data = await response.json();
-      
-      // Transform backend data to match frontend interface
       const results: SearchResult[] = [];
       
       if (searchType === 'users' && data.users) {
-        results.push(...data.users.map((user: any) => ({
-          id: user.id,
-          type: 'user' as const,
-          name: `${user.first_name} ${user.last_name}`,
-          description: user.bio || user.institution || 'No bio available',
-          avatar: user.avatar
-        })));
+        results.push(...data.users);
       }
       
       if (searchType === 'projects' && data.projects) {
-        results.push(...data.projects.map((project: any) => ({
-          id: project.id,
-          type: 'project' as const,
-          name: project.title,
-          description: project.description,
-          owner: `${project.first_name} ${project.last_name}`
-        })));
+        results.push(...data.projects);
       }
       
-      setSearchResults(results);
+      if (isLive) {
+        setLiveResults(results.slice(0, 5));
+        setShowDropdown(results.length > 0);
+      } else {
+        setSearchResults(results);
+        setShowDropdown(false);
+      }
     } catch (error) {
       console.error("Search error:", error);
-      setSearchResults([]);
+      if (!isLive) setSearchResults([]);
     } finally {
       setSearching(false);
     }
+  };
+
+  const handleSearch = () => {
+    performSearch(false);
   };
 
   if (loading) return (
@@ -107,15 +119,44 @@ export default function SearchPage() {
         {/* Search Bar */}
         <div className="glass-strong rounded-lg p-6 mb-6 border border-border">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
+            <div className="flex-1 relative">
               <input
                 type="text"
                 placeholder="Search for users, skills, or projects..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                onFocus={() => liveResults.length > 0 && setShowDropdown(true)}
                 className="input w-full"
               />
+              
+              {/* Live Search Dropdown */}
+              {showDropdown && liveResults.length > 0 && (
+                <div className="absolute z-50 mt-2 w-full bg-background border border-border rounded-lg shadow-xl max-h-96 overflow-y-auto">
+                  {liveResults.map((result) => (
+                    <Link
+                      key={result.id}
+                      href={`/profile/${result.id}`}
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-3 p-4 hover:bg-muted transition-colors border-b border-border/50 last:border-0"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-r from-primary to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-bold text-sm">
+                          {result.first_name?.[0] || 'U'}{result.last_name?.[0] || ''}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-foreground">
+                          {result.first_name} {result.last_name}
+                        </p>
+                        {result.institution && (
+                          <p className="text-sm text-muted-foreground truncate">{result.institution}</p>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
             
             <div className="flex gap-2">
@@ -131,7 +172,8 @@ export default function SearchPage() {
               <button
                 onClick={handleSearch}
                 disabled={searching || !searchQuery.trim()}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-green-600 hover:bg-green-700 px-6 py-2.5 rounded-lg font-medium transition-all shadow-md hover:shadow-lg border border-green-700 hover:border-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ color: '#ffffff' }}
               >
                 {searching ? "Searching..." : "Search"}
               </button>
