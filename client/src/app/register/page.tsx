@@ -27,8 +27,29 @@ export default function RegisterPage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const validateForm = (): string | null => {
+    if (!form.first_name.trim()) return "First name is required";
+    if (!form.last_name.trim()) return "Last name is required";
+    if (!form.email.trim()) return "Email is required";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "Please enter a valid email address";
+    if (!form.password) return "Password is required";
+    if (form.password.length < 8) return "Password must be at least 8 characters long";
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(form.password)) {
+      return "Password must contain at least one uppercase letter, one lowercase letter, and one number";
+    }
+    return null;
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    
     setLoading(true);
     setError("");
 
@@ -118,7 +139,9 @@ export default function RegisterPage() {
                   value={form.first_name}
                   onChange={handleChange}
                   className="input w-full"
-                  placeholder="Enter your first name"
+                  placeholder="John"
+                  minLength={2}
+                  maxLength={50}
                 />
               </div>
 
@@ -135,7 +158,9 @@ export default function RegisterPage() {
                   value={form.last_name}
                   onChange={handleChange}
                   className="input w-full"
-                  placeholder="Enter your last name"
+                  placeholder="Doe"
+                  minLength={2}
+                  maxLength={50}
                 />
               </div>
             </div>
@@ -153,7 +178,8 @@ export default function RegisterPage() {
                 value={form.email}
                 onChange={handleChange}
                 className="input w-full"
-                placeholder="Enter your email"
+                placeholder="john.doe@example.com"
+                pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
               />
             </div>
 
@@ -170,7 +196,9 @@ export default function RegisterPage() {
                 value={form.password}
                 onChange={handleChange}
                 className="input w-full"
-                placeholder="Create a password"
+                placeholder="Min. 8 characters"
+                minLength={8}
+                title="Password must be at least 8 characters with uppercase, lowercase, and numbers"
               />
             </div>
 

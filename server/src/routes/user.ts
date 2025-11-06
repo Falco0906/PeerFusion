@@ -202,33 +202,83 @@ router.put('/settings', authenticateToken, async (req, res) => {
   }
 });
 
-// Get user publications (Note: publications table needs to be added to schema)
+// Get user publications
 router.get('/:id/publications', authenticateToken, async (req, res) => {
   try {
     const userId = req.params.id === 'me' ? (req as any).user.id : parseInt(req.params.id);
 
-    // Note: publications table is not in the current schema
-    // This is a placeholder - you'll need to add the publications table
-    res.json([]);
+    const { data: publications, error } = await supabase
+      .from('publications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('year', { ascending: false });
+
+    if (error) {
+      // If table doesn't exist, return empty array
+      if (error.code === 'PGRST204' || error.code === '42P01') {
+        return res.json([]);
+      }
+      throw error;
+    }
+
+    res.json(publications || []);
   } catch (err) {
     console.error('Error fetching publications:', err);
     res.status(500).json({ error: 'Failed to fetch publications' });
   }
 });
 
-// Add publication (Note: publications table needs to be added to schema)
+// Add publication
 router.post('/publications', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).user.id;
-    const { title, authors, journal, year, doi, url, citation_count } = req.body;
+    const { 
+      title, 
+      authors, 
+      journal, 
+      conference,
+      year, 
+      doi, 
+      url, 
+      abstract,
+      citation_count,
+      publication_type = 'article',
+      is_featured = false
+    } = req.body;
 
     if (!title || !year) {
       return res.status(400).json({ error: 'Title and year are required' });
     }
 
-    // Note: publications table is not in the current schema
-    // This is a placeholder
-    res.status(501).json({ error: 'Publications feature not yet implemented' });
+    const { data: publication, error } = await supabase
+      .from('publications')
+      .insert({
+        user_id: userId,
+        title,
+        authors,
+        journal,
+        conference,
+        year,
+        doi,
+        url,
+        abstract,
+        citation_count: citation_count || 0,
+        publication_type,
+        is_featured
+      })
+      .select()
+      .single();
+
+    if (error) {
+      // If table doesn't exist, return appropriate error
+      if (error.code === '42P01') {
+        return res.status(503).json({ error: 'Publications feature is being set up. Please try again later.' });
+      }
+      throw error;
+    }
+
+    console.log('✅ Publication added successfully');
+    res.status(201).json(publication);
   } catch (err) {
     console.error('Error adding publication:', err);
     res.status(500).json({ error: 'Failed to add publication' });
@@ -374,8 +424,11 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
       endorsementCount = count || 0;
     }
     
-    // Get publication count (placeholder - table doesn't exist yet)
-    const publicationCount = 0;
+    // Get publication count
+    const { count: publicationCount } = await supabase
+      .from('publications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
     
     // Get profile views (if the column exists)
     const { data: userData } = await supabase

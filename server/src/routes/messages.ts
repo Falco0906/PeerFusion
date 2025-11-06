@@ -1,6 +1,5 @@
 // server/src/routes/messages.ts - Messaging API endpoints
 import { Router, Request, Response } from 'express';
-import { pool } from '../db';
 import { supabase } from '../supabase';
 import { authenticateToken } from '../middleware/authMiddleware';
 
@@ -11,65 +10,65 @@ router.get('/conversations', authenticateToken, async (req: Request, res: Respon
   try {
     const userId = (req as any).user.id;
     
-    // First get regular conversations with other users
-  const regularConversations = await pool.query(`
-      SELECT 
-        c.id,
-        c.last_message_at,
-        c.last_message_id,
-        m.content as last_message_content,
-        m.sender_id as last_message_sender_id,
-        CASE 
-          WHEN c.user1_id = ? THEN c.user2_id
-          ELSE c.user1_id
-        END as other_user_id,
-        u.first_name,
-        u.last_name,
-        u.email,
-        u.avatar
-      FROM conversations c
-      LEFT JOIN messages m ON m.id = c.last_message_id
-      LEFT JOIN users u ON u.id = CASE 
-        WHEN c.user1_id = ? THEN c.user2_id
-        ELSE c.user1_id
-      END
-      WHERE c.user1_id = ? OR c.user2_id = ?
-      ORDER BY c.last_message_at DESC
-    `, [userId, userId, userId, userId]);
+    // Get all messages where user is sender or receiver
+    const { data: messages, error } = await supabase
+      .from('messages')
+      .select(`
+        id,
+        sender_id,
+        receiver_id,
+        content,
+        created_at,
+        sender:users!messages_sender_id_fkey(
+          id,
+          first_name,
+          last_name,
+          email,
+          avatar
+        ),
+        receiver:users!messages_receiver_id_fkey(
+          id,
+          first_name,
+          last_name,
+          email,
+          avatar
+        )
+      `)
+      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+      .order('created_at', { ascending: false });
 
-  // Then get self-conversations (messages sent to self)
-  const selfConversations = await pool.query(`
-      SELECT 
-        CONCAT('self_', ?) as id,
-        MAX(m.created_at) as last_message_at,
-        MAX(m.id) as last_message_id,
-        MAX(m.content) as last_message_content,
-        MAX(m.sender_id) as last_message_sender_id,
-        ? as other_user_id,
-        u.first_name,
-        u.last_name,
-        u.email,
-        u.avatar
-      FROM messages m
-      JOIN users u ON u.id = ?
-      WHERE (m.sender_id = ? AND m.receiver_id = ?)
-      GROUP BY u.first_name, u.last_name, u.email, u.avatar
-      HAVING COUNT(*) > 0
-    `, [userId, userId, userId, userId, userId]);
+    if (error) throw error;
 
-    // Combine both results (cast rows to any)
-    const regRows = (regularConversations.rows as any) || [];
-    const selfRows = (selfConversations.rows as any) || [];
-    const allConversations = [...regRows, ...selfRows];
-
-    // Sort by last message time
-    allConversations.sort((a: any, b: any) => {
-      const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-      const timeB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
-      return timeB - timeA;
+    // Group messages by conversation
+    const conversationsMap = new Map();
+    
+    (messages || []).forEach((msg: any) => {
+      const otherUserId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
+      const otherUser = msg.sender_id === userId ? msg.receiver : msg.sender;
+      const conversationKey = `conv_${Math.min(userId, otherUserId)}_${Math.max(userId, otherUserId)}`;
+      
+      if (!conversationsMap.has(conversationKey)) {
+        conversationsMap.set(conversationKey, {
+          id: conversationKey,
+          other_user_id: otherUserId,
+          first_name: otherUser.first_name,
+          last_name: otherUser.last_name,
+          email: otherUser.email,
+          avatar: otherUser.avatar,
+          last_message_at: msg.created_at,
+          last_message_id: msg.id,
+          last_message_content: msg.content,
+          last_message_sender_id: msg.sender_id
+        });
+      }
     });
 
-    res.json(allConversations);
+    const conversations = Array.from(conversationsMap.values());
+    conversations.sort((a, b) => 
+      new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+    );
+
+    res.json(conversations);
   } catch (error) {
     console.error('❌ Error fetching conversations:', error);
     res.status(500).json({ error: 'Failed to fetch conversations' });
@@ -86,39 +85,37 @@ router.get('/chat/:userId', authenticateToken, async (req: Request, res: Respons
       return res.status(400).json({ error: 'Invalid user ID' });
     }
 
-    // Check if this is a self-conversation
-    const isSelfConversation = currentUserId === otherUserId;
+    // Get messages between the two users
+    const { data: messages, error } = await supabase
+      .from('messages')
+      .select(`
+        id,
+        sender_id,
+        receiver_id,
+        content,
+        message_type,
+        is_read,
+        created_at
+      `)
+      .or(
+        `and(sender_id.eq.${currentUserId},receiver_id.eq.${otherUserId}),` +
+        `and(sender_id.eq.${otherUserId},receiver_id.eq.${currentUserId})`
+      )
+      .order('created_at', { ascending: true });
 
-    // Get messages between the two users (or self-messages)
-    const result = await pool.query(`
-      SELECT 
-        m.id,
-        m.sender_id,
-        m.receiver_id,
-        m.content,
-        m.message_type,
-        m.is_read,
-        m.created_at,
-        u.first_name,
-        u.last_name,
-        u.avatar
-      FROM messages m
-      JOIN users u ON u.id = m.sender_id
-      WHERE (m.sender_id = ? AND m.receiver_id = ?)
-         OR (m.sender_id = ? AND m.receiver_id = ?)
-      ORDER BY m.created_at ASC
-    `, [currentUserId, otherUserId, otherUserId, currentUserId]);
+    if (error) throw error;
 
-    // Mark messages as read (except for self-messages to avoid infinite loop)
-    if (!isSelfConversation) {
-      await pool.query(`
-        UPDATE messages 
-        SET is_read = true 
-        WHERE sender_id = ? AND receiver_id = ? AND is_read = false
-      `, [otherUserId, currentUserId]);
+    // Mark messages as read (except for self-messages)
+    if (currentUserId !== otherUserId) {
+      await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('sender_id', otherUserId)
+        .eq('receiver_id', currentUserId)
+        .eq('is_read', false);
     }
 
-    res.json(result.rows);
+    res.json(messages || []);
   } catch (error) {
     console.error('❌ Error fetching chat history:', error);
     res.status(500).json({ error: 'Failed to fetch chat history' });
@@ -135,43 +132,34 @@ router.post('/send', authenticateToken, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Receiver ID and content are required' });
     }
 
-    // Verify receiver exists (allow self-messaging)
-    const userCheck = await pool.query('SELECT id FROM users WHERE id = ?', [receiverId]);
-    if (userCheck.rows.length === 0) {
+    // Verify receiver exists
+    const { data: receiver, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', receiverId)
+      .single();
+
+    if (userError || !receiver) {
       return res.status(404).json({ error: 'Receiver not found' });
     }
 
-    // Allow self-messaging - no need to check if sender and receiver are the same
-
     // Insert message
-    const insertResult = await pool.query(`
-      INSERT INTO messages (sender_id, receiver_id, content, message_type)
-      VALUES (?, ?, ?, ?)
-    `, [senderId, receiverId, content, messageType]);
+    const { data: message, error: insertError } = await supabase
+      .from('messages')
+      .insert({
+        sender_id: senderId,
+        receiver_id: receiverId,
+        content,
+        message_type: messageType,
+        is_read: false
+      })
+      .select()
+      .single();
 
-    const insertedId = insertResult.insertId;
-
-    // Fetch the inserted message
-    const fetched = await pool.query(`
-      SELECT id, sender_id, receiver_id, content, message_type, created_at
-      FROM messages WHERE id = ?
-    `, [insertedId]);
-
-    const message = fetched.rows[0] as any;
-
-    // Get sender info for the response
-    const senderInfo = await pool.query(`
-      SELECT first_name, last_name, avatar 
-      FROM users WHERE id = ?
-    `, [senderId]);
-
-    const messageWithSender = {
-      ...message,
-      sender: senderInfo.rows[0]
-    };
+    if (insertError) throw insertError;
 
     console.log(`💬 Message sent from ${senderId} to ${receiverId}`);
-    res.status(201).json(messageWithSender);
+    res.status(201).json(message);
 
   } catch (error) {
     console.error('❌ Error sending message:', error);
@@ -189,11 +177,14 @@ router.put('/read/:senderId', authenticateToken, async (req: Request, res: Respo
       return res.status(400).json({ error: 'Invalid sender ID' });
     }
 
-    await pool.query(`
-      UPDATE messages 
-      SET is_read = true 
-      WHERE sender_id = ? AND receiver_id = ? AND is_read = false
-    `, [senderId, receiverId]);
+    const { error } = await supabase
+      .from('messages')
+      .update({ is_read: true })
+      .eq('sender_id', senderId)
+      .eq('receiver_id', receiverId)
+      .eq('is_read', false);
+
+    if (error) throw error;
 
     res.json({ message: 'Messages marked as read' });
   } catch (error) {
