@@ -296,7 +296,7 @@ export default function ShareSkillsPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white hover:text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg border border-blue-700 hover:border-blue-800"
             >
               {submitting ? "Adding..." : "Add Skill"}
             </button>

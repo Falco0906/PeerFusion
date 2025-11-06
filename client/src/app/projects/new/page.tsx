@@ -161,7 +161,7 @@ export default function NewProjectPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg border border-blue-700 hover:border-blue-800"
             >
               {submitting ? "Creating..." : "Create Project"}
             </button>

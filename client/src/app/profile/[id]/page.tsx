@@ -877,7 +877,7 @@ export default function ProfilePage() {
                     {!isOwnProfile && (
                       <button
                         onClick={() => handleEndorseSkill(skill.id)}
-                        className="mt-3 w-full px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                        className="mt-3 w-full px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-all shadow-md hover:shadow-lg border border-blue-700 hover:border-blue-800"
                       >
                         Endorse Skill
                       </button>
