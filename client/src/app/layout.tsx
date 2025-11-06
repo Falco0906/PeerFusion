@@ -5,7 +5,7 @@ import Header from "@/components/common/Header";
 import AnimatedBackground from "@/components/common/AnimatedBackground";
 import PageTransition from "@/components/common/PageTransition";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
-import FloatingChat from "@/components/chat/FloatingChat";
+import SimpleChatWidget from "@/components/chat/SimpleChatWidget";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SocketProvider } from "@/contexts/SocketContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -60,7 +60,7 @@ export default function RootLayout({
                     <PageTransition>{children}</PageTransition>
                   </main>
                 </div>
-                <FloatingChat />
+                <SimpleChatWidget />
               </ErrorBoundary>
             </SocketProvider>
           </AuthProvider>
