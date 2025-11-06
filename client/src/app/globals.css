@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: 250 250 250;
-  --foreground: 52 53 65;
+  --background: 248 249 250;
+  --foreground: 17 24 39;
   --card: 255 255 255;
-  --card-foreground: 52 53 65;
+  --card-foreground: 31 41 55;
   --primary: 16 163 127;
   --primary-foreground: 255 255 255;
-  --secondary: 142 142 160;
+  --secondary: 100 116 139;
   --secondary-foreground: 255 255 255;
-  --muted: 236 236 241;
-  --muted-foreground: 142 142 160;
-  --accent: 236 236 241;
-  --accent-foreground: 52 53 65;
-  --border: 217 217 227;
-  --input: 217 217 227;
+  --muted: 241 245 249;
+  --muted-foreground: 100 116 139;
+  --accent: 241 245 249;
+  --accent-foreground: 30 41 59;
+  --border: 226 232 240;
+  --input: 226 232 240;
   --ring: 16 163 127;
   --destructive: 239 68 68;
   --success: 16 163 127;
@@ -279,15 +279,17 @@ select,
 
 /* Glassmorphism effect */
 .glass {
-  background: rgb(var(--card) / 0.6);
-  backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgb(var(--border) / 0.3);
+  background: rgb(var(--card) / 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgb(var(--border) / 0.6);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
 }
 
 .glass-strong {
-  background: rgb(var(--card) / 0.8);
-  backdrop-filter: blur(20px) saturate(200%);
-  border: 1px solid rgb(var(--border) / 0.5);
+  background: rgb(var(--card) / 0.95);
+  backdrop-filter: blur(20px);
+  border: 1.5px solid rgb(var(--border));
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.05);
 }
 
 /* Hover glow effect */
